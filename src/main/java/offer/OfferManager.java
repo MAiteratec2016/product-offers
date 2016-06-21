@@ -48,9 +48,11 @@ public class OfferManager {
 		offerMap = new HashMap<>();
 
 		for (ProductDetails pd : detailsResources.getContent()) {
-			ProductPrice price = pricesMap.get(pd.getProductNumber());
-			offerMap.put(pd.getProductNumber(), new Offer(pd.getProductNumber(), pd.getName(), pd.getDescription(),
-					price.getPrice(), price.getCurrency()));
+			if (pricesMap.containsKey(pd.getProductNumber())) {
+				ProductPrice price = pricesMap.get(pd.getProductNumber());
+				offerMap.put(pd.getProductNumber(), new Offer(pd.getProductNumber(), pd.getName(), pd.getDescription(),
+						price.getPrice(), price.getCurrency()));
+			}
 		}
 
 		offerArray = offerMap.values().toArray(new Offer[offerMap.values().size()]);
@@ -62,7 +64,14 @@ public class OfferManager {
 	}
 
 	public Offer getOffer(long productNumber) {
-		return offerMap.get(productNumber);
+		RestTemplate detailsTemplate = new RestTemplate();
+		ProductDetails details = detailsTemplate.getForObject("http://product-details-service:8080/products/" + productNumber, ProductDetails.class);
+		ProductPrice price = detailsTemplate.getForObject("http://product-prices-service:8080/products/" + productNumber, ProductPrice.class);
+		
+		if(details != null && price != null){
+			return new Offer(productNumber, details.getName(), details.getDescription(), price.getPrice(), price.getCurrency());
+		}
+		return null;
 	}
 
 	private RestTemplate getRestTemplate() {
